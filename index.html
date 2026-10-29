@@ -1,0 +1,354 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Unicorno Impazzito</title>
+<meta name="description" content="Guarda cosa fa questo unicorno">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Unicorno Impazzito">
+<meta property="og:description" content="Guarda cosa fa questo unicorno">
+<meta property="og:url" content="https://edoardopetruccelli-dev.github.io/unicorno/">
+<meta property="og:image" content="https://edoardopetruccelli-dev.github.io/unicorno/anteprima.jpg">
+<meta property="og:image:type" content="image/jpeg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="anteprima.jpg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@800&display=swap">
+<style>
+  :root{
+    --notte-alta:#120a35; --notte-media:#24104f; --notte-bassa:#060418;
+    --display:"Baloo 2","Arial Rounded MT Bold","Trebuchet MS",sans-serif;
+    color-scheme:dark;
+  }
+  html,body{height:100%;margin:0}
+  body{
+    overflow:hidden;cursor:none;
+    background-color:var(--notte-bassa);
+    background-image:
+      radial-gradient(70% 55% at 50% 48%, rgba(110,52,190,.42), transparent 70%),
+      linear-gradient(180deg,var(--notte-alta),var(--notte-media) 55%,var(--notte-bassa));
+  }
+  #scena{position:fixed;inset:0;width:100%;height:100%;display:block}
+  #unicorno{
+    position:fixed;left:0;top:0;width:220px;height:176px;
+    transform:translate(-600px,-600px);
+    will-change:transform;pointer-events:none;overflow:visible;
+    filter:drop-shadow(0 0 14px rgba(255,190,240,.35)) drop-shadow(0 10px 22px rgba(30,8,80,.6));
+  }
+  .gamba,.coda,.criniera{transform-box:view-box}
+  .g-an{transform-origin:208px 118px;animation:anteriore .46s ease-in-out infinite alternate}
+  .g-al{transform-origin:198px 122px;animation:anteriore .46s ease-in-out infinite alternate-reverse}
+  .g-pn{transform-origin:100px 118px;animation:posteriore .46s ease-in-out infinite alternate}
+  .g-pl{transform-origin:114px 122px;animation:posteriore .46s ease-in-out infinite alternate-reverse}
+  .coda{transform-origin:96px 98px;animation:coda .5s ease-in-out infinite alternate}
+  .criniera{transform-origin:210px 52px;animation:criniera .5s ease-in-out infinite alternate}
+  @keyframes anteriore{from{transform:rotate(-18deg)}to{transform:rotate(22deg)}}
+  @keyframes posteriore{from{transform:rotate(20deg)}to{transform:rotate(-16deg)}}
+  @keyframes coda{from{transform:rotate(-7deg)}to{transform:rotate(6deg)}}
+  @keyframes criniera{from{transform:rotate(-3deg)}to{transform:rotate(3deg)}}
+  @media (prefers-reduced-motion:reduce){.gamba,.coda,.criniera{animation:none}}
+</style>
+</head>
+<body>
+<canvas id="scena"></canvas>
+
+<svg id="unicorno" viewBox="0 0 300 240" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+  <defs>
+    <linearGradient id="pelo" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#e6dcff"/>
+    </linearGradient>
+    <linearGradient id="oro" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0" stop-color="#ffb22e"/>
+      <stop offset=".6" stop-color="#ffd86b"/>
+      <stop offset="1" stop-color="#fff4c2"/>
+    </linearGradient>
+  </defs>
+
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <g class="gamba g-al">
+      <path d="M198 122 L224 148 L208 168" stroke="#d3c6f6" stroke-width="13"/>
+      <circle cx="208" cy="168" r="7" fill="#a892ea" stroke="none"/>
+    </g>
+    <g class="gamba g-pl">
+      <path d="M114 122 L100 154 L76 168" stroke="#d3c6f6" stroke-width="13"/>
+      <circle cx="76" cy="168" r="7" fill="#a892ea" stroke="none"/>
+    </g>
+    <g class="coda" stroke-width="11">
+      <path d="M98 106 C86 122 78 140 64 152" stroke="#5cc8ff"/>
+      <path d="M96 104 C78 114 62 130 46 138" stroke="#7fe08a"/>
+      <path d="M94 100 C72 102 52 116 30 112" stroke="#ffe066"/>
+      <path d="M94 96 C70 84 48 96 26 86" stroke="#ffb35c"/>
+      <path d="M96 92 C74 66 54 74 34 56" stroke="#ff6fa3"/>
+      <path d="M96 98 C78 92 60 104 42 98" stroke="#b58cff" stroke-width="8"/>
+    </g>
+    <g class="gamba g-an">
+      <path d="M208 118 L240 138 L270 130" stroke="#f4efff" stroke-width="13"/>
+      <circle cx="270" cy="130" r="7" fill="#b9a6f0" stroke="none"/>
+    </g>
+    <g class="gamba g-pn">
+      <path d="M100 118 L78 146 L46 150" stroke="#f4efff" stroke-width="13"/>
+      <circle cx="46" cy="150" r="7" fill="#b9a6f0" stroke="none"/>
+    </g>
+  </g>
+
+  <path d="M190 82 C175 90 150 92 128 88 C110 84 96 84 88 92 C78 102 80 122 92 130
+           C105 138 130 140 155 138 C175 136 196 134 208 124 C218 116 222 104 226 92
+           C232 82 240 76 246 72 L252 76 C260 80 270 82 276 78 C283 74 284 64 278 60
+           C270 52 258 44 248 36 C242 30 234 30 228 34 C214 44 200 62 190 82 Z"
+        fill="url(#pelo)" stroke="#d6c9f8" stroke-width="1.5"/>
+
+  <g class="criniera" fill="none" stroke-linecap="round" stroke-width="10">
+    <path d="M190 82 C180 86 174 98 176 110" stroke="#b58cff"/>
+    <path d="M196 70 C184 70 174 82 170 96" stroke="#5cc8ff"/>
+    <path d="M204 59 C190 56 178 68 170 80" stroke="#7fe08a"/>
+    <path d="M211 49 C196 44 182 54 172 66" stroke="#ffe066"/>
+    <path d="M220 41 C204 32 188 40 178 52" stroke="#ffb35c"/>
+    <path d="M228 34 C214 22 198 26 186 36" stroke="#ff6fa3"/>
+  </g>
+
+  <path d="M224 38 L218 14 L234 30 Z" fill="#f4efff" stroke="#d6c9f8" stroke-width="1.2" stroke-linejoin="round"/>
+  <path d="M225 32 L221 20 L230 30 Z" fill="#ffc2dc"/>
+  <path d="M232 30 C240 26 248 30 250 38" fill="none" stroke="#ffb35c" stroke-width="7" stroke-linecap="round"/>
+  <path d="M236 31 L260 0 L247 35 Z" fill="url(#oro)" stroke="#f0a83a" stroke-width="1" stroke-linejoin="round"/>
+  <g stroke="#e8901c" stroke-width="1.8" stroke-linecap="round" opacity=".7">
+    <path d="M241.4 24 L251 27"/>
+    <path d="M248.4 15 L254.4 17.5"/>
+    <path d="M254.6 7 L257.4 8.5"/>
+  </g>
+  <ellipse cx="264" cy="64" rx="6.5" ry="3.8" fill="#ff9cc8" opacity=".6"/>
+  <ellipse cx="276" cy="67" rx="1.8" ry="1.3" fill="#a892ea"/>
+  <path d="M265 73.5 Q270 77 274.5 74.5" fill="none" stroke="#a892ea" stroke-width="1.6" stroke-linecap="round"/>
+  <ellipse cx="253" cy="52" rx="4.5" ry="5.5" fill="#2b1660"/>
+  <circle cx="254.6" cy="49.6" r="1.7" fill="#fff"/>
+  <g stroke="#2b1660" stroke-width="1.6" stroke-linecap="round">
+    <path d="M249 47.5 L246 44.5"/>
+    <path d="M251.5 46.5 L250 42.8"/>
+    <path d="M254.5 46.6 L255 43"/>
+  </g>
+</svg>
+
+<script>
+(function(){
+  "use strict";
+  var tela=document.getElementById('scena'), ctx=tela.getContext('2d');
+  var uni=document.getElementById('unicorno');
+  var ridotto=!!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
+  var FONT='"Baloo 2","Arial Rounded MT Bold","Trebuchet MS",sans-serif';
+  var PAROLA='SEI UN COGLIONE';
+  var CORNO=[260/300,1/240], GROPPA=[92/300,104/240];
+  var W=0,H=0,dpr=1,uw=220,uh=176,vel=240;
+  var stelle=[],bersagli=[],scintille=[],sprite=[];
+  var raggio=4, box={l:0,r:0,t:0,b:0,cy:0,h:0}, lettere=8;
+  var fase='scrive', tFase=0, tempo=0, ultimo=0, accumulo=0;
+  var ux=-600,uy=-600,vx=0,vy=0,flip=1,ang=0,prossimo=0;
+  var da=0,a=0,durata=4,onde=8;
+
+  function preparaSprite(){
+    sprite=[];
+    for(var i=0;i<36;i++){
+      var c=document.createElement('canvas'); c.width=c.height=64;
+      var g=c.getContext('2d'), gr=g.createRadialGradient(32,32,0,32,32,32), hue=i*10;
+      gr.addColorStop(0,'hsla('+hue+',100%,96%,1)');
+      gr.addColorStop(.22,'hsla('+hue+',100%,72%,.95)');
+      gr.addColorStop(.5,'hsla('+hue+',100%,62%,.32)');
+      gr.addColorStop(1,'hsla('+hue+',100%,60%,0)');
+      g.fillStyle=gr; g.fillRect(0,0,64,64);
+      sprite.push(c);
+    }
+  }
+  function brilla(x,y,r,hue,al){
+    var s=sprite[((Math.round(hue/10)%36)+36)%36];
+    ctx.globalAlpha=al; ctx.drawImage(s,x-r*2,y-r*2,r*4,r*4);
+  }
+  function righe(t,max){
+    var out=[],cur='';
+    t.split(' ').forEach(function(p){
+      if(!cur) cur=p;
+      else if((cur+' '+p).length<=max) cur+=' '+p;
+      else { out.push(cur); cur=p; }
+    });
+    if(cur) out.push(cur);
+    return out;
+  }
+  function preparaParola(){
+    var lin=righe(PAROLA, W<600?10:16);
+    lettere=PAROLA.replace(/ /g,'').length;
+    var off=document.createElement('canvas'); off.width=W; off.height=H;
+    var o=off.getContext('2d',{willReadFrequently:true});
+    o.font='800 100px '+FONT;
+    var largo=1;
+    lin.forEach(function(l){ largo=Math.max(largo,o.measureText(l).width); });
+    var fs=Math.min(100*W*0.86/largo, H*0.46/lin.length, 230);
+    o.font='800 '+fs+'px '+FONT; o.textAlign='center'; o.textBaseline='middle'; o.fillStyle='#fff';
+    lin.forEach(function(l,i){ o.fillText(l, W/2, H*0.5+(i-(lin.length-1)/2)*fs*0.98); });
+    var d=o.getImageData(0,0,W,H).data;
+    var passo=Math.max(4,Math.round(fs/17)), lista;
+    for(;;){
+      lista=[];
+      for(var y=0;y<H;y+=passo) for(var x=0;x<W;x+=passo)
+        if(d[(y*W+x)*4+3]>140) lista.push({tx:x,ty:y});
+      if(lista.length>2600) passo++; else break;
+    }
+    var l=1e9,r=-1e9,t=1e9,b=-1e9;
+    lista.forEach(function(p){
+      p.tx+=(Math.random()-.5)*passo*.45; p.ty+=(Math.random()-.5)*passo*.45;
+      l=Math.min(l,p.tx); r=Math.max(r,p.tx); t=Math.min(t,p.ty); b=Math.max(b,p.ty);
+    });
+    if(!lista.length){ l=W*.4; r=W*.6; t=H*.45; b=H*.55; }
+    lista.forEach(function(p){
+      p.hue=(330+(p.tx-l)/((r-l)||1)*300)%360; p.f=Math.random()*6.283; p.stato=0;
+    });
+    lista.sort(function(p,q){ return p.tx-q.tx; });
+    bersagli=lista; raggio=passo*0.62;
+    box={l:l,r:r,t:t,b:b,cy:(t+b)/2,h:b-t};
+  }
+  function misura(){
+    dpr=Math.min(window.devicePixelRatio||1,2);
+    W=window.innerWidth; H=window.innerHeight;
+    tela.width=Math.round(W*dpr); tela.height=Math.round(H*dpr);
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    uw=W<560 ? Math.round(W*0.38) : Math.round(Math.min(250,Math.max(170,W*0.17)));
+    uh=uw*0.8;
+    uni.style.width=uw+'px'; uni.style.height=uh+'px';
+    vel=Math.max(170,Math.min(420,W*0.24))*(ridotto?0.6:1);
+    stelle=[];
+    var n=Math.round(W*H/5200);
+    for(var i=0;i<n;i++) stelle.push({x:Math.random()*W,y:Math.random()*H,r:Math.random()*1.1+.3,f:Math.random()*6.283,v:.5+Math.random()*1.8});
+    preparaParola();
+  }
+  function daCorno(hx,hy,f,an){
+    var lx=(CORNO[0]-.5)*uw*f, ly=(CORNO[1]-.5)*uh, c=Math.cos(an), s=Math.sin(an);
+    return [hx-uw/2-(lx*c-ly*s), hy-uh/2-(lx*s+ly*c)];
+  }
+  function puntoDi(rel){
+    var lx=(rel[0]-.5)*uw*flip, ly=(rel[1]-.5)*uh, c=Math.cos(ang), s=Math.sin(ang);
+    return [ux+uw/2+lx*c-ly*s, uy+uh/2+lx*s+ly*c];
+  }
+  function iniziaScrittura(){
+    fase='scrive'; tFase=0; prossimo=0; scintille=[];
+    bersagli.forEach(function(b){ b.stato=0; });
+    da=-uw*0.15; a=box.r+uw*0.35;
+    durata=Math.min(7,Math.max(3.4,(a-da)/(vel*1.15)));
+    onde=Math.max(3,lettere);
+  }
+  function lancia(b,hx,hy){
+    b.stato=1; b.t0=tempo; b.dur=.5+Math.random()*.45;
+    b.sx=hx; b.sy=hy; b.x=hx; b.y=hy;
+    b.cx=(hx+b.tx)/2+(Math.random()-.5)*90;
+    b.cy=Math.min(hy,b.ty)-20-Math.random()*70;
+  }
+  function esplodi(){
+    bersagli.forEach(function(b){
+      var x=b.stato===1?b.x:b.tx, y=b.stato===1?b.y:b.ty;
+      var dx=x-W/2, dy=y-box.cy, n=Math.hypot(dx,dy)||1, s=120+Math.random()*320;
+      b.x=x; b.y=y; b.vx=dx/n*s+(Math.random()-.5)*120; b.vy=dy/n*s-80-Math.random()*220;
+      b.vita=1; b.stato=3;
+    });
+  }
+  function aggiorna(dt){
+    tFase+=dt;
+    if(fase==='scrive'){
+      var p=Math.min(1,tFase/durata), k=Math.PI*onde;
+      var hx=da+(a-da)*p, hy=box.cy+Math.sin(p*k)*box.h*0.42;
+      var dx=(a-da)/durata, dy=Math.cos(p*k)*k/durata*box.h*0.42;
+      flip=1;
+      var mira=Math.max(-.38,Math.min(.38,Math.atan2(dy,dx)*0.5));
+      ang+=(mira-ang)*Math.min(1,dt*10);
+      var pos=daCorno(hx,hy,flip,ang); ux=pos[0]; uy=pos[1];
+      while(prossimo<bersagli.length && bersagli[prossimo].tx<=hx+raggio*2){ lancia(bersagli[prossimo],hx,hy); prossimo++; }
+      if(p>=1){
+        while(prossimo<bersagli.length){ lancia(bersagli[prossimo],hx,hy); prossimo++; }
+        fase='libero'; tFase=0; vx=vel; vy=(Math.random()<.5?-1:1)*vel*.55;
+      }
+    } else {
+      ux+=vx*dt; uy+=vy*dt;
+      if(ux<0){ ux=0; vx=Math.abs(vx); }
+      if(fase==='libero' && ux>W-uw){ ux=W-uw; vx=-Math.abs(vx); }
+      if(uy<0){ uy=0; vy=Math.abs(vy); }
+      if(uy>H-uh){ uy=H-uh; vy=-Math.abs(vy); }
+      flip=vx<0?-1:1;
+      var mira2=Math.max(-.3,Math.min(.3,flip*Math.atan2(vy,Math.abs(vx))*0.45));
+      ang+=(mira2-ang)*Math.min(1,dt*6);
+      if(fase==='libero' && tFase>(ridotto?10:8)){
+        fase='esce'; tFase=0; vx=Math.abs(vx)*1.5+vel*.3; vy*=.4; esplodi();
+      }
+      if(fase==='esce' && ux>W+30 && tFase>1.9) iniziaScrittura();
+    }
+    accumulo+=dt*(ridotto?18:42);
+    while(accumulo>=1){
+      accumulo--;
+      var g=puntoDi(GROPPA);
+      scintille.push({x:g[0],y:g[1],vx:-flip*(30+Math.random()*50),vy:(Math.random()-.3)*40,vita:1,hue:(tempo*140)%360,r:2+Math.random()*2.6});
+    }
+    for(var i=scintille.length-1;i>=0;i--){
+      var s=scintille[i];
+      s.x+=s.vx*dt; s.y+=s.vy*dt; s.vy+=30*dt; s.vita-=dt/0.9;
+      if(s.vita<=0) scintille.splice(i,1);
+    }
+    for(var j=0;j<bersagli.length;j++){
+      var b=bersagli[j];
+      if(b.stato===1){
+        var u=Math.min(1,(tempo-b.t0)/b.dur), e=1-Math.pow(1-u,3), m=1-e;
+        b.x=m*m*b.sx+2*m*e*b.cx+e*e*b.tx;
+        b.y=m*m*b.sy+2*m*e*b.cy+e*e*b.ty;
+        if(u>=1) b.stato=2;
+      } else if(b.stato===3){
+        b.vy+=520*dt; b.x+=b.vx*dt; b.y+=b.vy*dt; b.vita-=dt/1.7;
+      }
+    }
+  }
+  function disegna(){
+    ctx.globalCompositeOperation='source-over'; ctx.globalAlpha=1;
+    ctx.clearRect(0,0,W,H);
+    ctx.fillStyle='#fff3d6';
+    for(var i=0;i<stelle.length;i++){
+      var st=stelle[i];
+      ctx.globalAlpha=.22+.55*(.5+.5*Math.sin(tempo*st.v+st.f));
+      ctx.fillRect(st.x,st.y,st.r*1.6,st.r*1.6);
+    }
+    ctx.globalCompositeOperation='lighter';
+    for(var j=0;j<bersagli.length;j++){
+      var b=bersagli[j];
+      if(b.stato===1) brilla(b.x,b.y,raggio*1.1,b.hue,1);
+      else if(b.stato===2) brilla(b.tx,b.ty,raggio*(.82+.22*Math.sin(tempo*4.5+b.f)),b.hue,.95);
+      else if(b.stato===3 && b.vita>0) brilla(b.x,b.y,raggio*(.6+.4*b.vita),b.hue,b.vita);
+    }
+    for(var k=0;k<scintille.length;k++){
+      var s=scintille[k];
+      brilla(s.x,s.y,s.r,s.hue,Math.max(0,s.vita));
+    }
+    ctx.globalCompositeOperation='source-over'; ctx.globalAlpha=1;
+    var saltello=fase==='scrive'?0:Math.sin(tempo*10)*uh*0.025;
+    uni.style.transform='translate('+ux.toFixed(1)+'px,'+(uy+saltello).toFixed(1)+'px) rotate('+ang.toFixed(3)+'rad) scaleX('+flip+')';
+  }
+  function ciclo(ora){
+    var dt=Math.min(.05,Math.max(0,(ora-ultimo)/1000));
+    ultimo=ora; tempo+=dt;
+    aggiorna(dt); disegna();
+    requestAnimationFrame(ciclo);
+  }
+  var partito=false;
+  function avvia(){
+    if(partito) return; partito=true;
+    preparaSprite(); misura(); iniziaScrittura();
+    requestAnimationFrame(function(t){ ultimo=t; requestAnimationFrame(ciclo); });
+  }
+  var pronto=(document.fonts && document.fonts.load)
+    ? Promise.race([document.fonts.load('800 100px "Baloo 2"'), new Promise(function(r){ setTimeout(r,2500); })])
+    : Promise.resolve();
+  pronto.then(avvia,avvia);
+
+  var attesa;
+  window.addEventListener('resize',function(){
+    clearTimeout(attesa);
+    attesa=setTimeout(function(){ if(partito){ misura(); iniziaScrittura(); } },250);
+  });
+})();
+</script>
+</body>
+</html>
