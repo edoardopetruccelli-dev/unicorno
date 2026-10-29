@@ -51,6 +51,13 @@
   @keyframes coda{from{transform:rotate(-7deg)}to{transform:rotate(6deg)}}
   @keyframes criniera{from{transform:rotate(-3deg)}to{transform:rotate(3deg)}}
   @media (prefers-reduced-motion:reduce){.gamba,.coda,.criniera{animation:none}}
+  #porta{position:fixed;inset:0;z-index:20;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;
+    padding:0 16px;text-align:center;cursor:pointer;color:#ffd6f5;background:rgba(10,5,30,.7);
+    -webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);transition:opacity .7s}
+  #porta.via{opacity:0;pointer-events:none}
+  #porta .invito{font:800 clamp(30px,6vw,68px)/1.1 var(--display);animation:respira 1.6s ease-in-out infinite alternate}
+  #porta .sotto{font:600 13px/1.4 system-ui,sans-serif;letter-spacing:.14em;text-transform:uppercase;opacity:.7}
+  @keyframes respira{from{transform:scale(1)}to{transform:scale(1.06)}}
 </style>
 </head>
 <body>
@@ -131,6 +138,8 @@
     <path d="M254.5 46.6 L255 43"/>
   </g>
 </svg>
+
+<div id="porta"><div class="invito">Clicca per liberare l'unicorno</div><div class="sotto">alza il volume</div></div>
 
 <script>
 (function(){
@@ -252,6 +261,7 @@
   }
   function aggiorna(dt){
     tFase+=dt;
+    audio();
     if(fase==='scrive'){
       var p=Math.min(1,tFase/durata), k=Math.PI*onde;
       var hx=da+(a-da)*p, hy=box.cy+Math.sin(p*k)*box.h*0.42;
@@ -326,6 +336,123 @@
     var saltello=fase==='scrive'?0:Math.sin(tempo*10)*uh*0.025;
     uni.style.transform='translate('+ux.toFixed(1)+'px,'+(uy+saltello).toFixed(1)+'px) rotate('+ang.toFixed(3)+'rad) scaleX('+flip+')';
   }
+  // ---- audio: tutto sintetizzato al momento, nessun file da scaricare ----
+  var Suono=(function(){
+    var ac=null, uscita=null, rumore=null;
+    function avvia(){
+      if(ac) return;
+      var C=window.AudioContext||window.webkitAudioContext;
+      if(!C) return;
+      ac=new C();
+      var comp=ac.createDynamicsCompressor();
+      comp.threshold.value=-14; comp.ratio.value=4; comp.connect(ac.destination);
+      uscita=ac.createGain(); uscita.gain.value=.85; uscita.connect(comp);
+      var n=ac.sampleRate*2, b=ac.createBuffer(1,n,ac.sampleRate), d=b.getChannelData(0);
+      for(var i=0;i<n;i++) d[i]=Math.random()*2-1;
+      rumore=b;
+      if(ac.state==='suspended') ac.resume();
+    }
+    function inviluppo(g,t,vol,att,dur){
+      g.gain.setValueAtTime(.0001,t);
+      g.gain.exponentialRampToValueAtTime(vol,t+att);
+      g.gain.exponentialRampToValueAtTime(.0001,t+Math.max(att+.01,dur));
+    }
+    function tono(o){
+      if(!ac) return;
+      var t=ac.currentTime+(o.ritardo||0), osc=ac.createOscillator(), g=ac.createGain(), dopo=g;
+      osc.type=o.tipo||'sine';
+      osc.frequency.setValueAtTime(o.f,t);
+      if(o.f2) osc.frequency.exponentialRampToValueAtTime(o.f2,t+(o.glide||o.durata));
+      inviluppo(g,t,o.vol||.1,o.attacco||.005,o.durata);
+      if(o.filtro){ var fl=ac.createBiquadFilter(); fl.type=o.filtro; fl.frequency.value=o.ff||1000; fl.Q.value=o.q||1; g.connect(fl); dopo=fl; }
+      osc.connect(g); dopo.connect(uscita);
+      osc.start(t); osc.stop(t+o.durata+.05);
+    }
+    function soffio(o){
+      if(!ac) return;
+      var t=ac.currentTime+(o.ritardo||0), src=ac.createBufferSource(), fl=ac.createBiquadFilter(), g=ac.createGain();
+      src.buffer=rumore; src.loop=true;
+      fl.type=o.filtro||'bandpass'; fl.frequency.setValueAtTime(o.f,t); fl.Q.value=o.q||1;
+      if(o.f2) fl.frequency.exponentialRampToValueAtTime(o.f2,t+o.durata);
+      inviluppo(g,t,o.vol||.1,o.attacco||.005,o.durata);
+      src.connect(fl); fl.connect(g); g.connect(uscita);
+      src.start(t,Math.random()*1.5); src.stop(t+o.durata+.05);
+    }
+    function fondo(o){
+      if(!ac) return null;
+      var src=ac.createBufferSource(), fl=ac.createBiquadFilter(), g=ac.createGain(), dopo=fl;
+      src.buffer=rumore; src.loop=true;
+      fl.type=o.filtro||'bandpass'; fl.frequency.value=o.f; fl.Q.value=o.q||1;
+      if(o.am){
+        var m=ac.createGain(), lfo=ac.createOscillator(), prof=ac.createGain();
+        m.gain.value=.5; prof.gain.value=.5; lfo.frequency.value=o.am;
+        lfo.connect(prof); prof.connect(m.gain); fl.connect(m); dopo=m; lfo.start();
+      }
+      g.gain.value=0;
+      src.connect(fl); dopo.connect(g); g.connect(uscita); src.start(0,Math.random()*1.5);
+      return {filtro:fl, vol:function(v,dolce){ g.gain.setTargetAtTime(v,ac.currentTime,dolce||.15); }};
+    }
+    function tenuto(o){
+      if(!ac) return null;
+      var osc=ac.createOscillator(), g=ac.createGain(), dopo=g;
+      osc.type=o.tipo||'sine'; osc.frequency.value=o.f; osc.detune.value=o.detune||0;
+      g.gain.value=0;
+      if(o.filtro){ var fl=ac.createBiquadFilter(); fl.type=o.filtro; fl.frequency.value=o.ff; fl.Q.value=o.q||.7; g.connect(fl); dopo=fl; }
+      osc.connect(g); dopo.connect(uscita); osc.start();
+      return {osc:osc, vol:function(v,dolce){ g.gain.setTargetAtTime(v,ac.currentTime,dolce||.15); }};
+    }
+    function campana(f,vol,dur,parziali,ritardo){
+      (parziali||[1,2.76,5.4,8.93]).forEach(function(p,i){ tono({f:f*p,vol:vol/(i+1),durata:dur/(1+i*.5),attacco:.003,ritardo:ritardo||0}); });
+    }
+    return {avvia:avvia, tono:tono, soffio:soffio, fondo:fondo, tenuto:tenuto, campana:campana,
+      attivo:function(){ return !!ac; }, ac:function(){ return ac; }, uscita:function(){ return uscita; }};
+  })();
+  var ultimiSuoni={};
+  function ogni(nome,intervallo){
+    if(!Suono.attivo()) return false;
+    var t=Suono.ac().currentTime, prima=ultimiSuoni[nome]===undefined?-99:ultimiSuoni[nome];
+    if(t-prima<intervallo) return false;
+    ultimiSuoni[nome]=t; return true;
+  }
+
+  // ---- i suoni dell'unicorno ----
+  var PENTA=[0,2,4,7,9], faseSentita='', lanciSentiti=0, passoZ=0;
+  function nota(g,base){ return (base||523.25)*Math.pow(2,(12*Math.floor(g/5)+PENTA[((g%5)+5)%5])/12); }
+  function ambiente(){
+    [261.63,329.63,392,493.88].forEach(function(f,i){
+      var p=Suono.tenuto({f:f,tipo:'triangle',filtro:'lowpass',ff:1100,detune:(i-1.5)*5});
+      if(p) p.vol(.014,2);
+    });
+  }
+  function ricomincia(){ iniziaScrittura(); faseSentita=''; }
+  function audio(){
+    if(!Suono.attivo()) return;
+    if(fase!==faseSentita){
+      if(fase==='scrive'){
+        lanciSentiti=0;
+        for(var i=0;i<10;i++) Suono.tono({f:nota(i),tipo:'triangle',vol:.05,durata:.9,ritardo:i*.045});
+      }
+      if(fase==='esce'){
+        Suono.tono({f:110,f2:38,vol:.5,durata:.6,attacco:.003});
+        Suono.soffio({f:400,f2:4500,q:.9,vol:.22,durata:.7,attacco:.05});
+        for(var k=0;k<14;k++) Suono.tono({f:nota(8+Math.floor(Math.random()*8)),vol:.03,durata:.5,ritardo:Math.random()*.6});
+      }
+      faseSentita=fase;
+    }
+    if(fase==='scrive' && prossimo>lanciSentiti){
+      lanciSentiti=prossimo;
+      if(ogni('scintilla',.05)){
+        var b=bersagli[prossimo-1], p=Math.max(0,Math.min(1,(b.tx-box.l)/((box.r-box.l)||1))), f=nota(Math.round(p*12)+2);
+        Suono.tono({f:f,vol:.035,durata:.6}); Suono.tono({f:f*2.01,vol:.012,durata:.3});
+      }
+    }
+    if(fase!=='scrive' && ogni('zoccolo',.19)){
+      passoZ^=1;
+      Suono.soffio({f:2400,q:3,vol:.045,durata:.04,attacco:.002});
+      Suono.tono({f:passoZ?760:640,f2:300,vol:.03,durata:.06});
+    }
+  }
+
   function ciclo(ora){
     var dt=Math.min(.05,Math.max(0,(ora-ultimo)/1000));
     ultimo=ora; tempo+=dt;
@@ -336,12 +463,30 @@
   function avvia(){
     if(partito) return; partito=true;
     preparaSprite(); misura(); iniziaScrittura();
+    if(/prova/.test(location.search)){ Suono.avvia(); ambiente(); }
+    var salta=/salta=([\d.]+)/.exec(location.search);
+    if(salta) for(var i=Math.round(parseFloat(salta[1])*60);i>0;i--){ tempo+=1/60; aggiorna(1/60); }
+    if(inAttesa) entra();
     requestAnimationFrame(function(t){ ultimo=t; requestAnimationFrame(ciclo); });
   }
   var pronto=(document.fonts && document.fonts.load)
     ? Promise.race([document.fonts.load('800 100px "Baloo 2"'), new Promise(function(r){ setTimeout(r,2500); })])
     : Promise.resolve();
   pronto.then(avvia,avvia);
+
+  // ---- la porta: il browser non fa partire l'audio senza un clic ----
+  var porta=document.getElementById('porta'), entrato=false, inAttesa=false;
+  if(/anteprima|salta=/.test(location.search)) porta.remove();
+  function entra(){
+    if(entrato || !porta.isConnected) return;
+    Suono.avvia();
+    if(!partito){ inAttesa=true; return; }
+    entrato=true; ambiente(); ricomincia();
+    porta.classList.add('via');
+    setTimeout(function(){ porta.remove(); },800);
+  }
+  porta.addEventListener('pointerdown',entra);
+  window.addEventListener('keydown',entra);
 
   var attesa;
   window.addEventListener('resize',function(){

@@ -24,6 +24,13 @@
   #fondo,#scena{position:fixed;left:0;top:0;width:100%;height:100%;display:block}
   #volpe{position:fixed;left:0;top:0;width:300px;height:300px;overflow:visible;
     filter:drop-shadow(0 0 22px rgba(130,190,255,.4))}
+  #porta{position:fixed;inset:0;z-index:20;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;
+    padding:0 16px;text-align:center;cursor:pointer;color:#bfe6ff;background:rgba(3,6,22,.72);
+    -webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);transition:opacity .7s}
+  #porta.via{opacity:0;pointer-events:none}
+  #porta .invito{font:clamp(28px,5.5vw,64px)/1.15 "Dela Gothic One","Arial Black",sans-serif;text-shadow:0 0 26px rgba(92,194,255,.75);animation:respira 1.8s ease-in-out infinite alternate}
+  #porta .sotto{font:600 13px/1.4 system-ui,sans-serif;letter-spacing:.14em;text-transform:uppercase;opacity:.7}
+  @keyframes respira{from{transform:scale(1)}to{transform:scale(1.05)}}
 </style>
 </head>
 <body>
@@ -66,6 +73,7 @@
   </g>
 </svg>
 <canvas id="scena"></canvas>
+<div id="porta"><div class="invito">Clicca per svegliare la volpe</div><div class="sotto">alza il volume</div></div>
 <script>
 (function(){
   "use strict";
@@ -287,6 +295,7 @@
       if(s.vita<=0) scintille.splice(i,1);
     }
     if(ANTEPRIMA) return;
+    audio();
     if(fase==='nasce'){
       fiamme.forEach(function(b){
         var u=(tFase-b.t0)/b.dur;
@@ -332,6 +341,138 @@
     ctx.globalCompositeOperation='source-over'; ctx.globalAlpha=1;
   }
 
+  // ---- audio: tutto sintetizzato al momento, nessun file da scaricare ----
+  var Suono=(function(){
+    var ac=null, uscita=null, rumore=null;
+    function avvia(){
+      if(ac) return;
+      var C=window.AudioContext||window.webkitAudioContext;
+      if(!C) return;
+      ac=new C();
+      var comp=ac.createDynamicsCompressor();
+      comp.threshold.value=-14; comp.ratio.value=4; comp.connect(ac.destination);
+      uscita=ac.createGain(); uscita.gain.value=.85; uscita.connect(comp);
+      var n=ac.sampleRate*2, b=ac.createBuffer(1,n,ac.sampleRate), d=b.getChannelData(0);
+      for(var i=0;i<n;i++) d[i]=Math.random()*2-1;
+      rumore=b;
+      if(ac.state==='suspended') ac.resume();
+    }
+    function inviluppo(g,t,vol,att,dur){
+      g.gain.setValueAtTime(.0001,t);
+      g.gain.exponentialRampToValueAtTime(vol,t+att);
+      g.gain.exponentialRampToValueAtTime(.0001,t+Math.max(att+.01,dur));
+    }
+    function tono(o){
+      if(!ac) return;
+      var t=ac.currentTime+(o.ritardo||0), osc=ac.createOscillator(), g=ac.createGain(), dopo=g;
+      osc.type=o.tipo||'sine';
+      osc.frequency.setValueAtTime(o.f,t);
+      if(o.f2) osc.frequency.exponentialRampToValueAtTime(o.f2,t+(o.glide||o.durata));
+      inviluppo(g,t,o.vol||.1,o.attacco||.005,o.durata);
+      if(o.filtro){ var fl=ac.createBiquadFilter(); fl.type=o.filtro; fl.frequency.value=o.ff||1000; fl.Q.value=o.q||1; g.connect(fl); dopo=fl; }
+      osc.connect(g); dopo.connect(uscita);
+      osc.start(t); osc.stop(t+o.durata+.05);
+    }
+    function soffio(o){
+      if(!ac) return;
+      var t=ac.currentTime+(o.ritardo||0), src=ac.createBufferSource(), fl=ac.createBiquadFilter(), g=ac.createGain();
+      src.buffer=rumore; src.loop=true;
+      fl.type=o.filtro||'bandpass'; fl.frequency.setValueAtTime(o.f,t); fl.Q.value=o.q||1;
+      if(o.f2) fl.frequency.exponentialRampToValueAtTime(o.f2,t+o.durata);
+      inviluppo(g,t,o.vol||.1,o.attacco||.005,o.durata);
+      src.connect(fl); fl.connect(g); g.connect(uscita);
+      src.start(t,Math.random()*1.5); src.stop(t+o.durata+.05);
+    }
+    function fondo(o){
+      if(!ac) return null;
+      var src=ac.createBufferSource(), fl=ac.createBiquadFilter(), g=ac.createGain(), dopo=fl;
+      src.buffer=rumore; src.loop=true;
+      fl.type=o.filtro||'bandpass'; fl.frequency.value=o.f; fl.Q.value=o.q||1;
+      if(o.am){
+        var m=ac.createGain(), lfo=ac.createOscillator(), prof=ac.createGain();
+        m.gain.value=.5; prof.gain.value=.5; lfo.frequency.value=o.am;
+        lfo.connect(prof); prof.connect(m.gain); fl.connect(m); dopo=m; lfo.start();
+      }
+      g.gain.value=0;
+      src.connect(fl); dopo.connect(g); g.connect(uscita); src.start(0,Math.random()*1.5);
+      return {filtro:fl, vol:function(v,dolce){ g.gain.setTargetAtTime(v,ac.currentTime,dolce||.15); }};
+    }
+    function tenuto(o){
+      if(!ac) return null;
+      var osc=ac.createOscillator(), g=ac.createGain(), dopo=g;
+      osc.type=o.tipo||'sine'; osc.frequency.value=o.f; osc.detune.value=o.detune||0;
+      g.gain.value=0;
+      if(o.filtro){ var fl=ac.createBiquadFilter(); fl.type=o.filtro; fl.frequency.value=o.ff; fl.Q.value=o.q||.7; g.connect(fl); dopo=fl; }
+      osc.connect(g); dopo.connect(uscita); osc.start();
+      return {osc:osc, vol:function(v,dolce){ g.gain.setTargetAtTime(v,ac.currentTime,dolce||.15); }};
+    }
+    function campana(f,vol,dur,parziali,ritardo){
+      (parziali||[1,2.76,5.4,8.93]).forEach(function(p,i){ tono({f:f*p,vol:vol/(i+1),durata:dur/(1+i*.5),attacco:.003,ritardo:ritardo||0}); });
+    }
+    return {avvia:avvia, tono:tono, soffio:soffio, fondo:fondo, tenuto:tenuto, campana:campana,
+      attivo:function(){ return !!ac; }, ac:function(){ return ac; }, uscita:function(){ return uscita; }};
+  })();
+  var ultimiSuoni={};
+  function ogni(nome,intervallo){
+    if(!Suono.attivo()) return false;
+    var t=Suono.ac().currentTime, prima=ultimiSuoni[nome]===undefined?-99:ultimiSuoni[nome];
+    if(t-prima<intervallo) return false;
+    ultimiSuoni[nome]=t; return true;
+  }
+
+  // ---- i suoni della volpe: una scala giapponese, un gong, un ululato ----
+  var HIRA=[0,2,3,7,8], faseSentita='', ululato=false, gong=false, nateSentite=0, grado=4, prossimaNota=0;
+  function suonoGrado(g){ return 293.66*Math.pow(2,(12*Math.floor(g/5)+HIRA[((g%5)+5)%5])/12); }
+  function ambiente(){ var v=Suono.fondo({filtro:'lowpass',f:500,q:.5}); if(v) v.vol(.04,2); }
+  function ricomincia(){ iniziaNascita(); faseSentita=''; }
+  function koto(f,vol){
+    Suono.tono({f:f,tipo:'triangle',vol:vol,durata:1.7,attacco:.004});
+    Suono.tono({f:f*2,vol:vol*.3,durata:.7,attacco:.004});
+    Suono.tono({f:f*3.01,vol:vol*.15,durata:.3,attacco:.003});
+  }
+  function ulula(){
+    var ac=Suono.ac(), t=ac.currentTime, osc=ac.createOscillator(), g=ac.createGain(), fl=ac.createBiquadFilter(), lfo=ac.createOscillator(), lg=ac.createGain();
+    osc.type='sawtooth'; fl.type='lowpass'; fl.frequency.value=1300; fl.Q.value=4;
+    osc.frequency.setValueAtTime(330,t); osc.frequency.linearRampToValueAtTime(560,t+.5);
+    osc.frequency.linearRampToValueAtTime(610,t+1.6); osc.frequency.linearRampToValueAtTime(380,t+2.3);
+    lfo.frequency.value=5.5; lg.gain.setValueAtTime(0,t); lg.gain.linearRampToValueAtTime(14,t+.8);
+    lfo.connect(lg); lg.connect(osc.frequency);
+    g.gain.setValueAtTime(.0001,t); g.gain.exponentialRampToValueAtTime(.12,t+.35);
+    g.gain.setValueAtTime(.12,t+1.7); g.gain.exponentialRampToValueAtTime(.0001,t+2.4);
+    osc.connect(fl); fl.connect(g); g.connect(Suono.uscita());
+    osc.start(t); lfo.start(t); osc.stop(t+2.5); lfo.stop(t+2.5);
+  }
+  function audio(){
+    if(!Suono.attivo()) return;
+    var ora=Suono.ac().currentTime;
+    if(ora>prossimaNota){
+      grado=Math.max(0,Math.min(9,grado+[-2,-1,-1,1,1,2][Math.floor(Math.random()*6)]));
+      koto(suonoGrado(grado),.06);
+      prossimaNota=ora+(Math.random()<.2?1.6:.45)+Math.random()*.8;
+    }
+    if(fase!==faseSentita){
+      if(fase==='nasce') nateSentite=0;
+      if(fase==='resta'){ ululato=false; gong=false; }
+      if(fase==='sale'){
+        for(var i=0;i<12;i++) Suono.tono({f:suonoGrado(8+i),vol:.04,durata:1.5,ritardo:i*.07});
+        Suono.soffio({f:300,f2:3000,q:.7,vol:.08,durata:1.6,attacco:.4});
+      }
+      faseSentita=fase;
+    }
+    if(fase==='nasce'){
+      var nate=0;
+      for(var k=0;k<fiamme.length;k++) if(fiamme[k].stato!==0) nate++;
+      if(nate>nateSentite){
+        nateSentite=nate;
+        if(ogni('tink',.07)) Suono.tono({f:suonoGrado(10+Math.floor(Math.random()*7)),vol:.022,durata:1.4});
+      }
+    }
+    if(fase==='resta'){
+      if(tFase>1.2 && !ululato){ ululato=true; ulula(); }
+      if(tFase>1.4 && !gong){ gong=true; Suono.campana(98,.3,5,[1,1.48,2.1,2.9,4.1]); }
+    }
+  }
+
   function ciclo(ora){
     var dt=Math.min(.05,Math.max(0,(ora-ultimo)/1000));
     ultimo=ora; tempo+=dt;
@@ -342,14 +483,30 @@
   function avvia(){
     if(partito) return; partito=true;
     creaCode(); preparaSprite(); misura();
+    if(/prova/.test(location.search)){ Suono.avvia(); ambiente(); }
     var salta=/salta=([\d.]+)/.exec(location.search);
     if(salta) for(var i=Math.round(parseFloat(salta[1])*60);i>0;i--){ tempo+=1/60; aggiorna(1/60); }
+    if(inAttesa) entra();
     requestAnimationFrame(function(t){ ultimo=t; requestAnimationFrame(ciclo); });
   }
   var pronto=(document.fonts && document.fonts.load)
     ? Promise.race([document.fonts.load('100px "Dela Gothic One"'),new Promise(function(r){ setTimeout(r,2500); })])
     : Promise.resolve();
   pronto.then(avvia,avvia);
+
+  // ---- la porta: il browser non fa partire l'audio senza un clic ----
+  var porta=document.getElementById('porta'), entrato=false, inAttesa=false;
+  if(/anteprima|salta=/.test(location.search)) porta.remove();
+  function entra(){
+    if(entrato || !porta.isConnected) return;
+    Suono.avvia();
+    if(!partito){ inAttesa=true; return; }
+    entrato=true; ambiente(); ricomincia();
+    porta.classList.add('via');
+    setTimeout(function(){ porta.remove(); },800);
+  }
+  porta.addEventListener('pointerdown',entra);
+  window.addEventListener('keydown',entra);
 
   var attesa;
   window.addEventListener('resize',function(){
