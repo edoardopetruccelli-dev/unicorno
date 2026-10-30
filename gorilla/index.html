@@ -106,7 +106,7 @@
   var ANTEPRIMA=/anteprima/.test(location.search);
   var ridotto=!!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
   var FONT='"Luckiest Guy","Arial Black",Impact,sans-serif';
-  var PAROLA='SEI UN COGLIONE';
+  var PAROLA=(function(){ var f=new URLSearchParams(location.search).get('frase')||''; f=f.split(' ').filter(Boolean).join(' ').toUpperCase().slice(0,60); return f||'SEI UN COGLIONE'; })();
   var W=0,H=0,dpr=1,suolo=0,gx=0,gy=0,gs=300;
   var sfondo=document.createElement('canvas'), alone=document.createElement('canvas'), liane=[], polvere=[];
   var luce=0;

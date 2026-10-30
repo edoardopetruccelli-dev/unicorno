@@ -83,7 +83,7 @@
   var ANTEPRIMA=/anteprima/.test(location.search);
   var ridotto=!!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
   var FONT='"Dela Gothic One","Arial Black",Impact,sans-serif';
-  var PAROLA='SEI UN COGLIONE';
+  var PAROLA=(function(){ var f=new URLSearchParams(location.search).get('frase')||''; f=f.split(' ').filter(Boolean).join(' ').toUpperCase().slice(0,60); return f||'SEI UN COGLIONE'; })();
   var NC=9, PERNO=[210,252], PUNTA=[26,-150];
   var W=0,H=0,dpr=1,fx=0,fy=0,fz=300;
   var code=[], angoli=[], fiamme=[], scintille=[], foglie=[], sprite=[], NH=16;
